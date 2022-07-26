@@ -42,9 +42,12 @@ const allValuesFromInterface: string[] = [];
         let ref = info.items["x-enum-reference"].$ref.split("/");
         ref = ref[ref.length - 1].split(".");
         ref = ref[ref.length - 1];
+        props = null;
 
         // Nothing to do here :)
       }
+
+      if (!props) continue;
 
       const genEnum = generateEnum(title, props);
       datas["enum"][category].push(genEnum);
@@ -66,19 +69,20 @@ const allValuesFromInterface: string[] = [];
           const checkIfRef = !!refs;
           const ref = checkIfRef && resolveRef(refs);
 
-          let valueToReturn = checkIfRef
-            ? ref
+          let [type, format] = checkIfRef
+            ? [ref, null]
             : value.type === "array"
-            ? value.items.type
-            : value.type;
+            ? [value.items.type, value.items.format]
+            : [value.type, value.format];
 
+          const valueToReturn = checkType(type, format);
           const array = value.type === "array" ? "[]" : "";
 
           if (!allValuesFromInterface.includes(valueToReturn)) {
             allValuesFromInterface.push(valueToReturn);
           }
 
-          return `${name}: ${checkType(valueToReturn)}${array};`;
+          return `${name}: ${valueToReturn}${array};`;
         });
 
         entries.push(...newEntries);
@@ -114,8 +118,12 @@ export function generateImport(imports: string[], from: string) {
   } from "${from}";`;
 }
 
-export function checkType(name: string) {
-  return name === "integer" ? "number" : name;
+export function checkType(type: string, format: string) {
+  return format && type === "integer"
+    ? format == "int64"
+      ? "string"
+      : "number"
+    : type;
 }
 
 export function resolveRef(ref: string) {
