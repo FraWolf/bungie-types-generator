@@ -6,6 +6,11 @@ const datas: any = {
   interface: {},
 };
 
+const isEnum: string[] = [];
+const isInterface: string[] = [];
+
+const allValuesFromInterface: string[] = [];
+
 (async () => {
   for (var def in definitions) {
     // @ts-ignore
@@ -43,6 +48,7 @@ const datas: any = {
 
       const genEnum = generateEnum(title, props);
       datas["enum"][category].push(genEnum);
+      isEnum.push(title);
     } else {
       const entries: string[] = [];
       const props = info.properties || info.additionalProperties;
@@ -68,6 +74,10 @@ const datas: any = {
 
           const array = value.type === "array" ? "[]" : "";
 
+          if (!allValuesFromInterface.includes(valueToReturn)) {
+            allValuesFromInterface.push(valueToReturn);
+          }
+
           return `${name}: ${checkType(valueToReturn)}${array};`;
         });
 
@@ -76,19 +86,33 @@ const datas: any = {
 
       const genInterface = generateInterface(title, entries);
       datas["interface"][category].push(genInterface);
+      isInterface.push(title);
     }
   }
 
   const writeEnum = Object.values(datas["enum"])
     .flatMap((item) => item)
     .join("\n\n");
-  writeFileSync(`output/enum.d.ts`, writeEnum);
+  writeFileSync(`output/enum.ts`, writeEnum);
 
+  const writeInterfaceImport = generateImport(
+    allValuesFromInterface.filter((type) => isEnum.includes(type)),
+    "./enum"
+  );
   const writeInterface = Object.values(datas["interface"])
     .flatMap((item) => item)
     .join("\n\n");
-  writeFileSync(`output/interface.d.ts`, writeInterface);
+
+  const interfaces = [writeInterfaceImport, writeInterface].join("\n\n");
+
+  writeFileSync(`output/interface.ts`, interfaces);
 })();
+
+export function generateImport(imports: string[], from: string) {
+  return `import {
+    ${imports.join(",\n")}
+  } from "${from}";`;
+}
 
 export function checkType(name: string) {
   return name === "integer" ? "number" : name;
