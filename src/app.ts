@@ -79,15 +79,17 @@ const datas: any = {
     }
   }
 
-  const writeEnum = Object.values(datas["enum"])
-    .flatMap((item) => item)
-    .join("\n\n");
-  writeFileSync(`output/enum.d.ts`, writeEnum);
+  console.log(Object.keys(datas["interface"]));
 
-  const writeInterface = Object.values(datas["interface"])
-    .flatMap((item) => item)
-    .join("\n\n");
-  writeFileSync(`output/interface.d.ts`, writeInterface);
+  // const writeEnum = Object.values(datas["enum"])
+  //   .flatMap((item) => item)
+  //   .join("\n\n");
+  // writeFileSync(`output/enum.d.ts`, writeEnum);
+
+  // const writeInterface = Object.values(datas["interface"])
+  //   .flatMap((item) => item)
+  //   .join("\n\n");
+  // writeFileSync(`output/interface.d.ts`, writeInterface);
 })();
 
 export function checkType(name: string) {
