@@ -12,7 +12,7 @@ const datas: any = {
     const info = definitions[def];
     const titleArrays = def.split(".");
 
-    const category = titleArrays[0];
+    const category = titleArrays[0].toLowerCase();
     let title = titleArrays[titleArrays.length - 1];
     const isArray = title.endsWith("[]");
     title = title.replace("[]", "");
@@ -47,8 +47,8 @@ const datas: any = {
           ref = ref[ref.length - 1].split(".");
           ref = ref[ref.length - 1];
 
-          console.log(title);
-          console.log(ref);
+          // console.log(title);
+          // console.log(ref);
 
           // Resolve ref
         }
@@ -58,9 +58,9 @@ const datas: any = {
       } else {
         var entries;
 
-        // if (title === "DestinyProfileResponse") {
-        //   console.log(info.properties["characterRecords"].allOf);
-        // }
+        if (title === "DestinyProgression") {
+          console.log(info.properties["rewardItemStates"]);
+        }
 
         if (info.properties) {
           entries = (Object.entries(info.properties) || []).map(
@@ -69,15 +69,36 @@ const datas: any = {
               // Add array parenteses
               // Checks for undefined
 
-              var valueToReturn =
-                value["x-enum-reference"] || value.type === "integer"
-                  ? "number"
-                  : value.type;
+              const checkIfRef = !!(
+                value?.$ref ||
+                value?.items?.$ref ||
+                value?.["x-enum-reference"]?.$ref ||
+                value?.items?.["x-enum-reference"]?.$ref ||
+                (value.allOf && value.allOf.length > 0 && value.allOf[0].$ref)
+              );
+
+              const ref =
+                checkIfRef &&
+                resolveRef(
+                  value?.$ref ||
+                    value?.items?.$ref ||
+                    value?.["x-enum-reference"]?.$ref ||
+                    value?.items?.["x-enum-reference"]?.$ref ||
+                    value.allOf[0].$ref
+                );
+
+              let valueToReturn = checkIfRef
+                ? ref
+                : value.type === "array"
+                ? toNumber(value.items.type)
+                : toNumber(value.type);
 
               // console.log("Name =", name);
               // console.log("Value =", value);
 
-              return `${name}: ${valueToReturn};`;
+              const array = value.type === "array" ? "[]" : "";
+
+              return `${name}: ${valueToReturn}${array};`;
             }
           );
 
@@ -101,13 +122,16 @@ const datas: any = {
   writeFileSync(`output/interface.d.ts`, writeInterface);
 })();
 
-export function resolve() {}
+export function toNumber(name: string) {
+  return name === "integer" ? "number" : name;
+}
 
-export function resolveRef(destination: string, ref: string) {
-  // console.log(destination, ref);
+export function resolveRef(ref: string) {
+  // #/definitions/Destiny.Milestones.DestinyPublicMilestone
 
-  // @ts-ignore
-  return openapi[destination][ref];
+  let refToSend = ref.replace("#/", "").split("/");
+  refToSend = refToSend[refToSend.length - 1].split(".");
+  return refToSend[refToSend.length - 1];
 }
 
 export function generateInterface(
