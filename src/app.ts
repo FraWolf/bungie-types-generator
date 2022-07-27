@@ -61,6 +61,7 @@ const allValuesFromInterface: string[] = [];
           const refs =
             value?.$ref ||
             value?.additionalProperties?.$ref ||
+            value?.additionalProperties?.items?.$ref ||
             value?.items?.$ref ||
             value?.["x-enum-reference"]?.$ref ||
             value?.items?.["x-enum-reference"]?.$ref ||
@@ -73,16 +74,29 @@ const allValuesFromInterface: string[] = [];
             ? [ref, null]
             : value.type === "array"
             ? [value.items.type, value.items.format]
+            : value.type === "object" && value.additionalProperties
+            ? [
+                value.additionalProperties.type,
+                value.additionalProperties.format,
+              ]
             : [value.type, value.format];
 
           const valueToReturn = checkType(type, format);
-          const array = value.type === "array" ? "[]" : "";
+          const array =
+            (value?.additionalProperties?.type || value.type) === "array"
+              ? "[]"
+              : "";
+
+          const isAdditional =
+            value.type === "object" && value.additionalProperties;
 
           if (!allValuesFromInterface.includes(valueToReturn)) {
             allValuesFromInterface.push(valueToReturn);
           }
 
-          return `${name}: ${valueToReturn}${array};`;
+          return isAdditional
+            ? `${name}: { [key: string]: ${valueToReturn}${array} };`
+            : `${name}: ${valueToReturn}${array};`;
         });
 
         entries.push(...newEntries);
