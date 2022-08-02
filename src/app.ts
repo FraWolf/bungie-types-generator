@@ -74,17 +74,17 @@ const allValuesFromInterface: string[] = [];
             ? [ref, null]
             : value.type === "array"
             ? [value.items.type, value.items.format]
-            : value.type === "object" &&
-              value.additionalProperties.additionalProperties
-            ? [
-                value.additionalProperties.additionalProperties.type,
-                value.additionalProperties.additionalProperties.format,
-              ]
             : value.type === "object" && value.additionalProperties
-            ? [
-                value.additionalProperties.type,
-                value.additionalProperties.format,
-              ]
+            ? value.additionalProperties.type === "object" &&
+              value.additionalProperties.additionalProperties
+              ? [
+                  value.additionalProperties.additionalProperties.type,
+                  value.additionalProperties.additionalProperties.format,
+                ]
+              : [
+                  value.additionalProperties.type,
+                  value.additionalProperties.format,
+                ]
             : [value.type, value.format];
 
           const valueToReturn = checkType(type, format);
@@ -96,12 +96,22 @@ const allValuesFromInterface: string[] = [];
           const isAdditional =
             value.type === "object" && value.additionalProperties;
 
+          const isAdditionalNested =
+            isAdditional &&
+            value.additionalProperties.type === "object" &&
+            value.additionalProperties.additionalProperties;
+
           if (!allValuesFromInterface.includes(valueToReturn)) {
             allValuesFromInterface.push(valueToReturn);
           }
 
+          const objectHead = (valueHead: any) =>
+            `{ [key: string]: ${valueHead}${array} }`;
+
           return isAdditional
-            ? `${name}: { [key: string]: ${valueToReturn}${array} };`
+            ? isAdditionalNested
+              ? `${name}: ${objectHead(objectHead(valueToReturn))};`
+              : `${name}: ${objectHead(valueToReturn)};`
             : `${name}: ${valueToReturn}${array};`;
         });
 
