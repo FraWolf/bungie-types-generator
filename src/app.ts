@@ -74,6 +74,12 @@ const allValuesFromInterface: string[] = [];
             ? [ref, null]
             : value.type === "array"
             ? [value.items.type, value.items.format]
+            : value.type === "object" &&
+              value.additionalProperties.additionalProperties
+            ? [
+                value.additionalProperties.additionalProperties.type,
+                value.additionalProperties.additionalProperties.format,
+              ]
             : value.type === "object" && value.additionalProperties
             ? [
                 value.additionalProperties.type,
