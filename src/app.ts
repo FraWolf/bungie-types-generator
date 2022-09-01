@@ -170,9 +170,10 @@ export function generateInterface(title: string, props: string[]) {
 
 export function generateEnum(
   title: string,
-  props: { name: string; value: any }[]
+  props: { name: string; value: any }[],
+  isConst: boolean = false
 ) {
-  return `export const enum ${title} { ${props
+  return `export ${isConst ? "const" : ""} enum ${title} { ${props
     .map((item) => `${item.name} = ${item.value},`)
     .join("\n")} };`;
 }

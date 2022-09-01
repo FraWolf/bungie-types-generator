@@ -1,14 +1,16 @@
 {
-  "name": "typescript-playground",
+  "name": "bungie-types-generator",
   "version": "1.0.0",
   "description": "",
   "main": "src/app.ts",
   "scripts": {
-    "gen": "ts-node src/app"
+    "gen": "ts-node src/app",
+    "compare": "ts-node src/compare",
+    "clean": ""
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Francesco Lombardo <frawolf@outlook.it> (https://frawolf.dev)",
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^18.6.1",
     "ts-node": "^10.9.1",
