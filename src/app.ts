@@ -20,6 +20,7 @@ const allValuesFromInterface: string[] = [];
     const category = titleArrays[0].toLowerCase();
     let title = titleArrays[titleArrays.length - 1];
     title = title.replace("[]", "");
+    let description = info.description;
 
     if (!datas["enum"][category]) datas["enum"][category] = [];
     if (!datas["interface"][category]) datas["interface"][category] = [];
@@ -33,6 +34,7 @@ const allValuesFromInterface: string[] = [];
             return {
               name: item.identifier,
               value: item.numericValue,
+              comment: item.description,
             };
           } else {
             return item;
@@ -49,7 +51,7 @@ const allValuesFromInterface: string[] = [];
 
       if (!props) continue;
 
-      const genEnum = generateEnum(title, props);
+      const genEnum = generateEnum(title, props, false, description);
       datas["enum"][category].push(genEnum);
       isEnum.push(title);
     } else {
@@ -106,19 +108,23 @@ const allValuesFromInterface: string[] = [];
           }
 
           const objectHead = (valueHead: any) =>
-            `{ [key: string]: ${valueHead}${array} }`;
+            `Record<string, ${valueHead}${array}>`;
 
-          return isAdditional
+          const prop = isAdditional
             ? isAdditionalNested
               ? `${name}: ${objectHead(objectHead(valueToReturn))};`
               : `${name}: ${objectHead(valueToReturn)};`
             : `${name}: ${valueToReturn}${array};`;
+
+          return value?.description
+            ? `${generateComment(value?.description)}\n${prop}`
+            : prop;
         });
 
         entries.push(...newEntries);
       }
 
-      const genInterface = generateInterface(title, entries);
+      const genInterface = generateInterface(title, entries, description);
       datas["interface"][category].push(genInterface);
       isInterface.push(title);
     }
@@ -162,18 +168,40 @@ export function resolveRef(ref: string) {
   return refToSend[refToSend.length - 1];
 }
 
-export function generateInterface(title: string, props: string[]) {
-  return `export interface ${title} {
+export function generateInterface(
+  title: string,
+  props: string[],
+  comment?: string
+) {
+  const stringInterface = `export interface ${title} {
     ${props.join("\n")}
   }`;
+
+  return comment
+    ? `${generateComment(comment)}\n${stringInterface}`
+    : stringInterface;
 }
 
 export function generateEnum(
   title: string,
-  props: { name: string; value: any }[],
-  isConst: boolean = false
+  props: { name: string; value: any; comment?: string }[],
+  isConst: boolean = false,
+  comment?: string
 ) {
-  return `export ${isConst ? "const" : ""} enum ${title} { ${props
-    .map((item) => `${item.name} = ${item.value},`)
-    .join("\n")} };`;
+  const stringEnum = `export ${isConst ? "const" : ""} enum ${title} {
+    ${props
+      .map((item) => {
+        return item?.comment
+          ? `${generateComment(item.comment)}\n${item.name} = ${item.value},`
+          : `${item.name} = ${item.value},`;
+      })
+      .join("\n")}
+    };`;
+
+  return comment ? `${generateComment(comment)}\n${stringEnum}` : stringEnum;
+}
+
+export function generateComment(lines: string) {
+  const linesArray = lines.split("\r\n");
+  return linesArray.map((line) => `// ${line.trim()}`).join("\n");
 }
