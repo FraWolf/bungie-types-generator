@@ -6,6 +6,7 @@
   "scripts": {
     "gen": "ts-node src/app",
     "compare": "ts-node src/compare",
+    "test": "ts-node src/endpoint.ts",
     "clean": ""
   },
   "keywords": [],

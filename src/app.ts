@@ -1,5 +1,13 @@
 import { writeFileSync } from "fs";
 import { definitions } from "../bungie-api/openapi-2.json";
+import {
+  checkType,
+  generateComment,
+  generateEnum,
+  generateImport,
+  generateInterface,
+  resolveRef,
+} from "./functions";
 
 const datas: any = {
   enum: {},
@@ -147,61 +155,3 @@ const allValuesFromInterface: string[] = [];
 
   writeFileSync(`output/interface.ts`, interfaces);
 })();
-
-export function generateImport(imports: string[], from: string) {
-  return `import {
-    ${imports.join(",\n")}
-  } from "${from}";`;
-}
-
-export function checkType(type: string, format: string) {
-  return format && type === "integer"
-    ? format == "int64"
-      ? "string"
-      : "number"
-    : type;
-}
-
-export function resolveRef(ref: string) {
-  let refToSend = ref.replace("#/", "").split("/");
-  refToSend = refToSend[refToSend.length - 1].split(".");
-  return refToSend[refToSend.length - 1];
-}
-
-export function generateInterface(
-  title: string,
-  props: string[],
-  comment?: string
-) {
-  const stringInterface = `export interface ${title} {
-    ${props.join("\n")}
-  }`;
-
-  return comment
-    ? `${generateComment(comment)}\n${stringInterface}`
-    : stringInterface;
-}
-
-export function generateEnum(
-  title: string,
-  props: { name: string; value: any; comment?: string }[],
-  isConst: boolean = false,
-  comment?: string
-) {
-  const stringEnum = `export ${isConst ? "const" : ""} enum ${title} {
-    ${props
-      .map((item) => {
-        return item?.comment
-          ? `${generateComment(item.comment)}\n${item.name} = ${item.value},`
-          : `${item.name} = ${item.value},`;
-      })
-      .join("\n")}
-    };`;
-
-  return comment ? `${generateComment(comment)}\n${stringEnum}` : stringEnum;
-}
-
-export function generateComment(lines: string) {
-  const linesArray = lines.split("\r\n");
-  return linesArray.map((line) => `// ${line.trim()}`).join("\n");
-}
