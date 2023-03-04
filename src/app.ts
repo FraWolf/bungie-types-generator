@@ -6,6 +6,7 @@ import {
   generateEnum,
   generateImport,
   generateInterface,
+  searchRef,
   resolveRef,
 } from "./functions";
 
@@ -68,14 +69,7 @@ const allValuesFromInterface: string[] = [];
 
       if (props) {
         const newEntries = Object.entries(props).map(([name, value]: any) => {
-          const refs =
-            value?.$ref ||
-            value?.additionalProperties?.$ref ||
-            value?.additionalProperties?.items?.$ref ||
-            value?.items?.$ref ||
-            value?.["x-enum-reference"]?.$ref ||
-            value?.items?.["x-enum-reference"]?.$ref ||
-            value?.allOf?.[0]?.$ref;
+          const refs = searchRef(value);
 
           const checkIfRef = !!refs;
           const ref = checkIfRef && resolveRef(refs);

@@ -12,10 +12,51 @@ export function checkType(type: string, format: string) {
     : type;
 }
 
-export function resolveRef(ref: string) {
+export function resolveRef(ref: string, lastPartOnly: boolean = true) {
   let refToSend = ref.replace("#/", "").split("/");
-  refToSend = refToSend[refToSend.length - 1].split(".");
-  return refToSend[refToSend.length - 1];
+  let newRef = refToSend[refToSend.length - 1];
+
+  if (lastPartOnly) {
+    let splittedRef = newRef.split(".");
+    newRef = splittedRef[splittedRef.length - 1];
+  }
+
+  return newRef;
+}
+
+export function getSchemaFromResponse(fullRef: string, fullJson: any) {
+  if (fullRef.includes("responses")) {
+    const refPath =
+      fullJson.components.responses[resolveRef(fullRef, false)].content[
+        "application/json"
+      ].schema.properties.Response;
+    fullRef = searchRef(refPath) || `any`;
+  }
+
+  return fullRef.includes("#/") ? resolveRef(fullRef) : fullRef;
+}
+
+export function searchRef(value: any) {
+  return (
+    value?.$ref ||
+    value?.additionalProperties?.$ref ||
+    value?.additionalProperties?.items?.$ref ||
+    value?.items?.$ref ||
+    value?.["x-enum-reference"]?.$ref ||
+    value?.items?.["x-enum-reference"]?.$ref ||
+    value?.allOf?.[0]?.$ref
+  );
+}
+
+export function getBodyParams(requestBody: any) {
+  const body = requestBody.content["application/json"].schema;
+  const checkIfRef = !!body.$ref;
+
+  if (checkIfRef) {
+    console.log(body.$ref);
+  }
+
+  // TODO: Handle body params that are not ref
 }
 
 export function generateInterface(
@@ -64,34 +105,45 @@ export function generateFunctionComment(
   /**
    * ${description}
    ${parameters
-     .map((item) => `@param ${item.name} ${item.description}`)
+     .map((item) => `* @param ${item.name} ${item.description}`)
      .join("\n")}
+    * @returns ${description}
    */
   `;
 }
 
 export function formatProps(parameters: any[], oauth: boolean = false) {
-  // if(oauth) parameters.push()
-
   const result: any[] = [];
 
   const requiredParameters = parameters
     .filter((item) => item.in === "path")
     .map((item) => {
       return `${item.name}${!item.required ? "?" : ""}: ${checkType(
-        item.type,
-        item.format
+        item.schema.type,
+        item.schema.format
       )}`;
     })
     .join(",");
+
+  // const bodyParameters = parameters
+  //   .filter((item) => item.in === "path")
+  //   .map((item) => {
+  //     return `${item.name}${!item.required ? "?" : ""}: ${checkType(
+  //       item.schema.type,
+  //       item.schema.format
+  //     )}`;
+  //   })
+  //   .join(",");
 
   const queryString = buildQueryString(
     parameters.filter((item) => item.in === "query")
   );
 
   if (requiredParameters !== "") result.push(requiredParameters);
+  // if (bodyParameters !== "") result.push(bodyParameters);
   if (parameters.filter((item) => item.in === "query").length > 0)
     result.push(queryString);
+  if (oauth) result.push("tokens: Tokens");
 
   return result.join(",");
 }
@@ -101,10 +153,14 @@ export function buildQueryString(parameters: any[]) {
   const params = parameters.map((item) => {
     if (item.required && !required) required = true;
 
-    return `${item.name}?: ${checkType(item.type, item.format)}`;
+    return `${item.name}?: ${checkType(item.schema.type, item.schema.format)}`;
   });
 
   return `queryString${!required ? "?" : ""}: {
     ${params}
   }`;
+}
+
+export function replaceAll(text: string, find: string, replace: string) {
+  return text.replace(new RegExp(find, "g"), replace);
 }
