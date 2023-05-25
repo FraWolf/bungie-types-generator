@@ -112,6 +112,27 @@ export function generateFunctionComment(
   `;
 }
 
+export function formatBody(parameters: any) {
+  let final: any[] = [];
+
+  for (let paramName in parameters) {
+    const parameter = parameters[paramName];
+
+    final.push({
+      name: paramName,
+      in: "body",
+      description: parameter.description,
+      required: !parameter.nullable,
+      schema: {
+        type: parameter.type,
+        format: parameter.format,
+      },
+    });
+  }
+
+  return final;
+}
+
 export function formatProps(parameters: any[], oauth: boolean = false) {
   const result: any[] = [];
 
@@ -125,22 +146,22 @@ export function formatProps(parameters: any[], oauth: boolean = false) {
     })
     .join(",");
 
-  // const bodyParameters = parameters
-  //   .filter((item) => item.in === "path")
-  //   .map((item) => {
-  //     return `${item.name}${!item.required ? "?" : ""}: ${checkType(
-  //       item.schema.type,
-  //       item.schema.format
-  //     )}`;
-  //   })
-  //   .join(",");
+  const bodyParameters = parameters
+    .filter((item) => item.in === "body")
+    .map((item) => {
+      return `${item.name}${!item.required ? "?" : ""}: ${checkType(
+        item.schema.type,
+        item.schema.format
+      )}`;
+    })
+    .join(",");
 
   const queryString = buildQueryString(
     parameters.filter((item) => item.in === "query")
   );
 
   if (requiredParameters !== "") result.push(requiredParameters);
-  // if (bodyParameters !== "") result.push(bodyParameters);
+  if (bodyParameters !== "") result.push(bodyParameters);
   if (parameters.filter((item) => item.in === "query").length > 0)
     result.push(queryString);
   if (oauth) result.push("tokens: Tokens");
@@ -164,3 +185,5 @@ export function buildQueryString(parameters: any[]) {
 export function replaceAll(text: string, find: string, replace: string) {
   return text.replace(new RegExp(find, "g"), replace);
 }
+
+export function checkForRef() {}

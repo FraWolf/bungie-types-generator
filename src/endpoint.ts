@@ -1,6 +1,7 @@
 import { writeFileSync } from "fs";
 import fullJson, { paths } from "../bungie-api/openapi.json";
 import {
+  formatBody,
   formatProps,
   generateComment,
   generateFunctionComment,
@@ -39,15 +40,40 @@ import {
     const bodyType =
       method === "POST" && correctMethod.requestBody
         ? correctMethod.requestBody.content["application/json"].schema.$ref
-          ? getSchemaFromResponse(
-              correctMethod.requestBody.content["application/json"].schema.$ref,
-              fullJson
-            )
-          : correctMethod.requestBody.content["application/json"].schema.items
-              .type
-        : "";
+          ? {
+              isRef: true,
+              type: getSchemaFromResponse(
+                correctMethod.requestBody.content["application/json"].schema
+                  .$ref,
+                fullJson
+              ),
+              fullRef: resolveRef(
+                correctMethod.requestBody.content["application/json"].schema
+                  .$ref,
+                false
+              ),
+            }
+          : {
+              isRef: false,
+              type: correctMethod.requestBody.content["application/json"].schema
+                .items.type,
+              fullRef: null,
+            }
+        : { isRef: false, type: null, fullRef: null };
 
-    const properties = formatProps(correctMethod.parameters, isOauth);
+    let bodyArray: any[] = [];
+    if (bodyType.isRef && bodyType.fullRef) {
+      bodyArray = formatBody(
+        // @ts-ignore
+        fullJson.components.schemas[bodyType.fullRef].properties
+      );
+    }
+
+    const formattedProps = [...correctMethod.parameters, ...bodyArray];
+
+    // console.log(formattedProps);
+
+    const properties = formatProps(formattedProps, isOauth);
     const stringTemplate = replaceAll(
       `${comments}${functionName}(${properties}): Promise<APIResponse<${responseInterface}>> {
       var requestURL = \`§{this.url}${replaceAll(endpoint, "{", "${")}\`
@@ -58,7 +84,7 @@ import {
       }
       ${
         method === "POST"
-          ? `const bodyParams: ${bodyType} = {
+          ? `const bodyParams: ${bodyType.type} = {
        
       };`
           : ""
