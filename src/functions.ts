@@ -61,8 +61,15 @@ export function getSchemaFromResponse(fullRef: string, fullJson: any) {
       fullJson.components.responses[resolveRef(fullRef, false)].content[
         "application/json"
       ].schema.properties.Response;
-    fullRef = searchRef(refPath) || `any`;
+
+    fullRef = searchRef(refPath) || resolveRef(fullRef);
   }
+
+  fullRef = fullRef.startsWith("int")
+    ? fullRef === "int64"
+      ? "string"
+      : "number"
+    : fullRef;
 
   return fullRef.includes("#/") ? resolveRef(fullRef) : fullRef;
 }
