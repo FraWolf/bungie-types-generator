@@ -4,12 +4,43 @@ export function generateImport(imports: string[], from: string) {
   } from "${from}";`;
 }
 
-export function checkType(type: string, format: string) {
-  return format && type === "integer"
-    ? format == "int64"
-      ? "string"
-      : "number"
-    : type;
+export function getTypeAndFormat(value: any) {
+  let [type, format] =
+    value.type === "array"
+      ? [value.items.type, value.items.format]
+      : value.type === "object" && value.additionalProperties
+      ? value.additionalProperties.type === "object" &&
+        value.additionalProperties.additionalProperties
+        ? [
+            value.additionalProperties.additionalProperties.type,
+            value.additionalProperties.additionalProperties.format,
+          ]
+        : [value.additionalProperties.type, value.additionalProperties.format]
+      : [value.type, value.format];
+
+  return [type, format];
+}
+
+export function getFullType(value: any) {
+  const refs = searchRef(value);
+
+  const checkIfRef = !!refs;
+  const ref = checkIfRef && resolveRef(refs);
+
+  // console.log(value);
+  let [type, format] = checkIfRef ? [ref, null] : getTypeAndFormat(value);
+
+  const valueToReturn =
+    format && type === "integer"
+      ? format == "int64"
+        ? "string"
+        : "number"
+      : type;
+
+  const array =
+    (value?.additionalProperties?.type || value.type) === "array" ? "[]" : "";
+
+  return `${valueToReturn}${array}`;
 }
 
 export function resolveRef(ref: string, lastPartOnly: boolean = true) {
@@ -53,7 +84,7 @@ export function getBodyParams(requestBody: any) {
   const checkIfRef = !!body.$ref;
 
   if (checkIfRef) {
-    console.log(body.$ref);
+    // console.log(body.$ref);
   }
 
   // TODO: Handle body params that are not ref
@@ -123,10 +154,7 @@ export function formatBody(parameters: any) {
       in: "body",
       description: parameter.description,
       required: !parameter.nullable,
-      schema: {
-        type: parameter.type,
-        format: parameter.format,
-      },
+      schema: parameter,
     });
   }
 
@@ -139,20 +167,18 @@ export function formatProps(parameters: any[], oauth: boolean = false) {
   const requiredParameters = parameters
     .filter((item) => item.in === "path")
     .map((item) => {
-      return `${item.name}${!item.required ? "?" : ""}: ${checkType(
-        item.schema.type,
-        item.schema.format
-      )}`;
+      return `${item.name}: ${getFullType(item.schema)}${
+        !item.required ? "| null" : ""
+      }`;
     })
     .join(",");
 
   const bodyParameters = parameters
     .filter((item) => item.in === "body")
     .map((item) => {
-      return `${item.name}${!item.required ? "?" : ""}: ${checkType(
-        item.schema.type,
-        item.schema.format
-      )}`;
+      return `${item.name}: ${getFullType(item.schema)}${
+        !item.required ? "| null" : ""
+      }`;
     })
     .join(",");
 
@@ -169,21 +195,44 @@ export function formatProps(parameters: any[], oauth: boolean = false) {
   return result.join(",");
 }
 
+export function formatBodyProps(parameters: any[]) {
+  const bodyParameters = parameters
+    .filter((item) => item.in === "body")
+    .map((item) => {
+      return `${item.name}`;
+    });
+
+  return bodyParameters.join(",");
+}
+
 export function buildQueryString(parameters: any[]) {
   let required = false;
   const params = parameters.map((item) => {
     if (item.required && !required) required = true;
 
-    return `${item.name}?: ${checkType(item.schema.type, item.schema.format)}`;
+    return `${item.name}?: ${getFullType(item.schema)}`;
   });
 
-  return `queryString${!required ? "?" : ""}: {
+  return `queryString: {
     ${params}
-  }`;
+  }${!required ? "| null" : ""}`;
 }
 
 export function replaceAll(text: string, find: string, replace: string) {
   return text.replace(new RegExp(find, "g"), replace);
+}
+
+export function replaceArrayAll(
+  text: string,
+  data: { find: string; replace: string }[]
+) {
+  let firstData = text;
+
+  data.forEach(({ find, replace }) => {
+    firstData = text.replace(new RegExp(find, "g"), replace);
+  });
+
+  return firstData;
 }
 
 export function checkForRef() {}

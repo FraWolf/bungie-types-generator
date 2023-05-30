@@ -2,12 +2,15 @@ import { writeFileSync } from "fs";
 import fullJson, { paths } from "../bungie-api/openapi.json";
 import {
   formatBody,
+  formatBodyProps,
   formatProps,
   generateComment,
   generateFunctionComment,
+  getFullType,
   getSchemaFromResponse,
   replaceAll,
   resolveRef,
+  searchRef,
 } from "./functions";
 
 (async () => {
@@ -27,15 +30,25 @@ import {
       fullJson
     );
 
+    const endpointParameters = correctMethod.parameters || [];
+
     const comments = generateFunctionComment(
       correctMethod.description,
-      correctMethod.parameters
+      endpointParameters
     );
 
     const isOauth =
       correctMethod.security &&
       correctMethod.security.length > 0 &&
       correctMethod.security.filter((item: any) => item["oauth2"]);
+
+    // console.log(
+    //   endpoint === "/Forum/Recruit/Summaries/" &&
+    //     method === "POST" &&
+    //     correctMethod.requestBody
+    //     ? correctMethod.requestBody.content["application/json"].schema
+    //     : "no"
+    // );
 
     const bodyType =
       method === "POST" && correctMethod.requestBody
@@ -47,6 +60,8 @@ import {
                   .$ref,
                 fullJson
               ),
+              schema:
+                correctMethod.requestBody.content["application/json"].schema,
               fullRef: resolveRef(
                 correctMethod.requestBody.content["application/json"].schema
                   .$ref,
@@ -57,9 +72,11 @@ import {
               isRef: false,
               type: correctMethod.requestBody.content["application/json"].schema
                 .items.type,
+              schema:
+                correctMethod.requestBody.content["application/json"].schema,
               fullRef: null,
             }
-        : { isRef: false, type: null, fullRef: null };
+        : { isRef: false, type: null, schema: null, fullRef: null };
 
     let bodyArray: any[] = [];
     if (bodyType.isRef && bodyType.fullRef) {
@@ -67,26 +84,40 @@ import {
         // @ts-ignore
         fullJson.components.schemas[bodyType.fullRef].properties
       );
+
+      // console.log(bodyArray);
     }
 
-    const formattedProps = [...correctMethod.parameters, ...bodyArray];
+    // if (endpoint === "/Forum/Recruit/Summaries/") console.log(bodyType);
+    // if (bodyType?.schema === null && method === "POST")
+    //   console.log(endpoint, bodyType);
+    // if (method === "POST" && bodyType.isRef) {
+    // console.log(endpoint, bodyType);
+    // }
 
-    // console.log(formattedProps);
+    const formattedProps = [...endpointParameters, ...bodyArray];
 
     const properties = formatProps(formattedProps, isOauth);
+    const includesQueryString = properties.includes("queryString:");
     const stringTemplate = replaceAll(
-      `${comments}${functionName}(${properties}): Promise<APIResponse<${responseInterface}>> {
-      var requestURL = \`§{this.url}${replaceAll(endpoint, "{", "${")}\`
+      `${comments}public ${functionName}(${properties}): Promise<APIResponse<${responseInterface}>> {
+      var requestURL = ${
+        includesQueryString ? "formatQueryStrings(" : ""
+      }\`§{this.url}${replaceAll(endpoint, "{", "${")}\`${
+        includesQueryString ? ", queryString);" : ""
+      }
       ${
         isOauth
           ? "const authHeaders = parseAuthenticationHeaders(this.headers, tokens);"
           : ""
       }
       ${
-        method === "POST"
-          ? `const bodyParams: ${bodyType.type} = {
-       
-      };`
+        method === "POST" && correctMethod.requestBody
+          ? `const bodyParams: ${getFullType(bodyType?.schema)} = ${
+              bodyType?.schema?.type === "array"
+                ? `[${formatBodyProps(bodyArray)}]`
+                : `{${formatBodyProps(bodyArray)}}`
+            }`
           : ""
       }
       return request(requestURL, true, "${method}", ${
