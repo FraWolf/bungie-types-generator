@@ -1,4 +1,4 @@
-import { writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import fullJson, { paths } from "../bungie-api/openapi.json";
 import {
   formatBody,
@@ -29,6 +29,43 @@ import {
       correctMethod.responses["200"]["$ref"],
       fullJson
     );
+
+    // console.log(responseInterface);
+
+    // if (
+    //   responseInterface === "IReadOnlyCollectionOfContentItemPublicContract"
+    // ) {
+    //   console.log(correctMethod.responses["200"]["$ref"]);
+    // }
+
+    //     const isAdditional =
+    //     value.type === "object" && value.additionalProperties;
+
+    //   const isNullable = value?.nullable ? "| null" : "";
+
+    //   const isAdditionalNested =
+    //     isAdditional &&
+    //     value.additionalProperties.type === "object" &&
+    //     value.additionalProperties.additionalProperties;
+
+    //   if (!allValuesFromInterface.includes(fullTestValueWithoutArray)) {
+    //     allValuesFromInterface.push(fullTestValueWithoutArray);
+    //   }
+
+    //   const objectHead = (valueHead: any) => `Record<string, ${valueHead}>`;
+
+    //   const prop = isAdditional
+    //     ? isAdditionalNested
+    //       ? `${name}: ${objectHead(
+    //           objectHead(`${fullTestValue}${isNullable}`)
+    //         )};`
+    //       : `${name}: ${objectHead(`${fullTestValue}${isNullable}`)};`
+    //     : `${name}: ${`${fullTestValue}${isNullable}`};`;
+
+    //   return value?.description
+    //     ? `${generateComment(value?.description)}\n${prop}`
+    //     : prop;
+    // });
 
     const endpointParameters = correctMethod.parameters || [];
 
@@ -122,7 +159,11 @@ import {
       }
       return request(requestURL, true, "${method}", ${
         isOauth ? "authHeaders" : "this.headers"
-      }${method === "POST" ? ", JSON.stringify(bodyParams)" : ""});
+      }${
+        method === "POST" && correctMethod.requestBody
+          ? ", JSON.stringify(bodyParams)"
+          : ""
+      });
     }`,
       "§",
       "$"
@@ -143,6 +184,10 @@ import {
       ${endpoints[index].join("\n\n")}
     }`;
 
-    writeFileSync(`output/class/${index}.ts`, stringTemplate);
+    const folderName = index.toLowerCase();
+
+    if (!existsSync(`output/class/${folderName}`))
+      mkdirSync(`output/class/${folderName}`);
+    writeFileSync(`output/class/${folderName}/index.ts`, stringTemplate);
   }
 })();

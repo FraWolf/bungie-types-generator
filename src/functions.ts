@@ -62,6 +62,33 @@ export function getSchemaFromResponse(fullRef: string, fullJson: any) {
         "application/json"
       ].schema.properties.Response;
 
+    if (refPath.type === "object" && refPath["x-dictionary-key"]) {
+      const key = refPath["x-dictionary-key"]["x-enum-reference"]
+        ? resolveRef(refPath["x-dictionary-key"]["x-enum-reference"].$ref)
+        : refPath["x-dictionary-key"].format && refPath["x-dictionary-key"].type
+        ? refPath["x-dictionary-key"].format &&
+          refPath["x-dictionary-key"].type === "integer"
+          ? refPath["x-dictionary-key"].format == "int64"
+            ? "string"
+            : "number"
+          : refPath["x-dictionary-key"].type
+        : refPath["x-dictionary-key"].type;
+
+      const value = refPath.additionalProperties.$ref
+        ? resolveRef(refPath.additionalProperties.$ref)
+        : refPath.additionalProperties.type;
+
+      return `Record<${key}, ${value}>`;
+    }
+
+    if (
+      Object.entries(refPath).length === 1 &&
+      refPath.type &&
+      refPath.type === "object"
+    ) {
+      return "object";
+    }
+
     fullRef = searchRef(refPath) || resolveRef(fullRef);
   }
 
@@ -197,7 +224,7 @@ export function formatProps(parameters: any[], oauth: boolean = false) {
   if (bodyParameters !== "") result.push(bodyParameters);
   if (parameters.filter((item) => item.in === "query").length > 0)
     result.push(queryString);
-  if (oauth) result.push("tokens: Tokens");
+  if (oauth) result.push("tokens: ITokens");
 
   return result.join(",");
 }
