@@ -55,28 +55,62 @@ export function resolveRef(ref: string, lastPartOnly: boolean = true) {
   return newRef;
 }
 
+export function getNestedProps(nested: any) {
+  return nested["x-dictionary-key"]["x-enum-reference"]
+    ? resolveRef(nested["x-dictionary-key"]["x-enum-reference"].$ref)
+    : nested["x-dictionary-key"].format && nested["x-dictionary-key"].type
+    ? nested["x-dictionary-key"].format &&
+      nested["x-dictionary-key"].type === "integer"
+      ? nested["x-dictionary-key"].format == "int64"
+        ? "string"
+        : "number"
+      : nested["x-dictionary-key"].type
+    : nested["x-dictionary-key"].type;
+}
+
 export function getSchemaFromResponse(fullRef: string, fullJson: any) {
+  let isArray = false;
+
   if (fullRef.includes("responses")) {
     const refPath =
       fullJson.components.responses[resolveRef(fullRef, false)].content[
         "application/json"
       ].schema.properties.Response;
 
-    if (refPath.type === "object" && refPath["x-dictionary-key"]) {
-      const key = refPath["x-dictionary-key"]["x-enum-reference"]
-        ? resolveRef(refPath["x-dictionary-key"]["x-enum-reference"].$ref)
-        : refPath["x-dictionary-key"].format && refPath["x-dictionary-key"].type
-        ? refPath["x-dictionary-key"].format &&
-          refPath["x-dictionary-key"].type === "integer"
-          ? refPath["x-dictionary-key"].format == "int64"
-            ? "string"
-            : "number"
-          : refPath["x-dictionary-key"].type
-        : refPath["x-dictionary-key"].type;
+    // DEBUG
+    // if (fullRef.includes("UserTheme")) {
+    // if (
+    //   refPath.type === "array" ||
+    //   refPath?.additionalProperties?.type === "array" ||
+    //   refPath?.additionalProperties?.additionalProperties?.type === "array"
+    // ) {
+    //   console.log(refPath);
+    // }
 
-      const value = refPath.additionalProperties.$ref
-        ? resolveRef(refPath.additionalProperties.$ref)
-        : refPath.additionalProperties.type;
+    isArray = refPath.type === "array";
+
+    if (refPath.type === "object" && refPath["x-dictionary-key"]) {
+      const key = getNestedProps(refPath);
+
+      let value;
+
+      if (
+        refPath.additionalProperties.type === "object" &&
+        refPath.additionalProperties.additionalProperties
+      ) {
+        const nestedKey = getNestedProps(refPath.additionalProperties);
+
+        const nestedValue = refPath.additionalProperties.additionalProperties
+          .$ref
+          ? resolveRef(refPath.additionalProperties.additionalProperties.$ref)
+          : refPath.additionalProperties.additionalProperties.type;
+
+        value = `Record<${nestedKey},${nestedValue}>`;
+      } else {
+        value = refPath.additionalProperties.$ref
+          ? resolveRef(refPath.additionalProperties.$ref)
+          : refPath.additionalProperties.type;
+      }
 
       return `Record<${key}, ${value}>`;
     }
@@ -98,7 +132,9 @@ export function getSchemaFromResponse(fullRef: string, fullJson: any) {
       : "number"
     : fullRef;
 
-  return fullRef.includes("#/") ? resolveRef(fullRef) : fullRef;
+  return `${fullRef.includes("#/") ? resolveRef(fullRef) : fullRef}${
+    isArray ? "[]" : ""
+  }`;
 }
 
 export function searchRef(value: any) {
@@ -224,7 +260,7 @@ export function formatProps(parameters: any[], oauth: boolean = false) {
   if (bodyParameters !== "") result.push(bodyParameters);
   if (parameters.filter((item) => item.in === "query").length > 0)
     result.push(queryString);
-  if (oauth) result.push("tokens: ITokens");
+  if (oauth) result.push("tokens?: ITokens");
 
   return result.join(",");
 }

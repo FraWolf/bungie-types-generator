@@ -13,6 +13,8 @@ import {
   searchRef,
 } from "./functions";
 
+const oAuthOverride = true;
+
 (async () => {
   var endpoints: Record<string, string[]> = {};
 
@@ -75,9 +77,10 @@ import {
     );
 
     const isOauth =
-      correctMethod.security &&
-      correctMethod.security.length > 0 &&
-      correctMethod.security.filter((item: any) => item["oauth2"]);
+      (correctMethod.security &&
+        correctMethod.security.length > 0 &&
+        correctMethod.security.filter((item: any) => item["oauth2"])) ||
+      oAuthOverride;
 
     // console.log(
     //   endpoint === "/Forum/Recruit/Summaries/" &&
@@ -138,7 +141,7 @@ import {
     const includesQueryString = properties.includes("queryString:");
     const stringTemplate = replaceAll(
       `${comments}public ${functionName}(${properties}): Promise<APIResponse<${responseInterface}>> {
-      var requestURL = ${
+      const requestURL = ${
         includesQueryString ? "formatQueryStrings(" : ""
       }\`§{this.url}${replaceAll(endpoint, "{", "${")}\`${
         includesQueryString ? ", queryString);" : ""
@@ -157,7 +160,7 @@ import {
             }`
           : ""
       }
-      return request(requestURL, true, "${method}", ${
+      return Controller.request(requestURL, true, "${method}", ${
         isOauth ? "authHeaders" : "this.headers"
       }${
         method === "POST" && correctMethod.requestBody
