@@ -48,7 +48,7 @@ const allValuesFromInterface: string[] = [];
             return item;
           }
         });
-      } else if (info.items["x-enum-reference"]) {
+      } else if (info?.items?.["x-enum-reference"]) {
         let ref = info.items["x-enum-reference"].$ref.split("/");
         ref = ref[ref.length - 1].split(".");
         ref = ref[ref.length - 1];

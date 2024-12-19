@@ -14,6 +14,7 @@ import {
 } from "./functions";
 
 const oAuthOverride = true;
+const useCustomFetcher = false;
 
 (async () => {
   var endpoints: Record<string, string[]> = {};
@@ -137,13 +138,22 @@ const oAuthOverride = true;
 
     const formattedProps = [...endpointParameters, ...bodyArray];
 
+    const newUrl =
+      functionName === "GetPostGameCarnageReport"
+        ? replaceAll(
+            '§{this.url.replace("www.bungie.net","stats.bungie.net")}',
+            "§",
+            "$"
+          )
+        : replaceAll("§{this.url}", "§", "$");
+
     const properties = formatProps(formattedProps, isOauth);
     const includesQueryString = properties.includes("queryString:");
     const stringTemplate = replaceAll(
       `${comments}public ${functionName}(${properties}): Promise<APIResponse<${responseInterface}>> {
       const requestURL = ${
         includesQueryString ? "formatQueryStrings(" : ""
-      }\`§{this.url}${replaceAll(endpoint, "{", "${")}\`${
+      }\`${newUrl}${replaceAll(endpoint, "{", "${")}\`${
         includesQueryString ? ", queryString);" : ""
       }
       ${
@@ -160,7 +170,9 @@ const oAuthOverride = true;
             }`
           : ""
       }
-      return Controller.request(requestURL, true, "${method}", ${
+      return ${
+        useCustomFetcher ? "Controller.request" : "request"
+      }(requestURL, true, "${method}", ${
         isOauth ? "authHeaders" : "this.headers"
       }${
         method === "POST" && correctMethod.requestBody
@@ -190,7 +202,7 @@ const oAuthOverride = true;
     const folderName = index.toLowerCase();
 
     if (!existsSync(`output/class/${folderName}`))
-      mkdirSync(`output/class/${folderName}`);
+      mkdirSync(`output/class/${folderName}`, { recursive: true });
     writeFileSync(`output/class/${folderName}/index.ts`, stringTemplate);
   }
 })();

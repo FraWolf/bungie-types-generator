@@ -6,8 +6,8 @@
   "scripts": {
     "gen": "ts-node src/app",
     "compare": "ts-node src/compare",
-    "test": "ts-node src/endpoint.ts",
-    "clean": ""
+    "endpoints": "ts-node src/endpoint.ts",
+    "start": "npm run gen && npm run endpoints"
   },
   "keywords": [],
   "author": "Francesco Lombardo <frawolf@outlook.it> (https://frawolf.dev)",
