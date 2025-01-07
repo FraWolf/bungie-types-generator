@@ -5,7 +5,6 @@
   "main": "src/app.ts",
   "scripts": {
     "gen": "ts-node src/app",
-    "compare": "ts-node src/compare",
     "endpoints": "ts-node src/endpoint.ts",
     "start": "npm run gen && npm run endpoints"
   },
