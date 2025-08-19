@@ -14,7 +14,7 @@ import {
 } from "./functions";
 
 const oAuthOverride = true;
-const useCustomFetcher = false;
+const useCustomFetcher = true;
 
 (async () => {
   var endpoints: Record<string, string[]> = {};
@@ -33,43 +33,6 @@ const useCustomFetcher = false;
       fullJson
     );
 
-    // console.log(responseInterface);
-
-    // if (
-    //   responseInterface === "IReadOnlyCollectionOfContentItemPublicContract"
-    // ) {
-    //   console.log(correctMethod.responses["200"]["$ref"]);
-    // }
-
-    //     const isAdditional =
-    //     value.type === "object" && value.additionalProperties;
-
-    //   const isNullable = value?.nullable ? "| null" : "";
-
-    //   const isAdditionalNested =
-    //     isAdditional &&
-    //     value.additionalProperties.type === "object" &&
-    //     value.additionalProperties.additionalProperties;
-
-    //   if (!allValuesFromInterface.includes(fullTestValueWithoutArray)) {
-    //     allValuesFromInterface.push(fullTestValueWithoutArray);
-    //   }
-
-    //   const objectHead = (valueHead: any) => `Record<string, ${valueHead}>`;
-
-    //   const prop = isAdditional
-    //     ? isAdditionalNested
-    //       ? `${name}: ${objectHead(
-    //           objectHead(`${fullTestValue}${isNullable}`)
-    //         )};`
-    //       : `${name}: ${objectHead(`${fullTestValue}${isNullable}`)};`
-    //     : `${name}: ${`${fullTestValue}${isNullable}`};`;
-
-    //   return value?.description
-    //     ? `${generateComment(value?.description)}\n${prop}`
-    //     : prop;
-    // });
-
     const endpointParameters = correctMethod.parameters || [];
 
     const comments = generateFunctionComment(
@@ -82,14 +45,6 @@ const useCustomFetcher = false;
         correctMethod.security.length > 0 &&
         correctMethod.security.filter((item: any) => item["oauth2"])) ||
       oAuthOverride;
-
-    // console.log(
-    //   endpoint === "/Forum/Recruit/Summaries/" &&
-    //     method === "POST" &&
-    //     correctMethod.requestBody
-    //     ? correctMethod.requestBody.content["application/json"].schema
-    //     : "no"
-    // );
 
     const bodyType =
       method === "POST" && correctMethod.requestBody
@@ -125,16 +80,7 @@ const useCustomFetcher = false;
         // @ts-ignore
         fullJson.components.schemas[bodyType.fullRef].properties
       );
-
-      // console.log(bodyArray);
     }
-
-    // if (endpoint === "/Forum/Recruit/Summaries/") console.log(bodyType);
-    // if (bodyType?.schema === null && method === "POST")
-    //   console.log(endpoint, bodyType);
-    // if (method === "POST" && bodyType.isRef) {
-    // console.log(endpoint, bodyType);
-    // }
 
     const formattedProps = [...endpointParameters, ...bodyArray];
 
