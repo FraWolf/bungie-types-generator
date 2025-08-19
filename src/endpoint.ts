@@ -12,14 +12,18 @@ import {
   resolveRef,
   searchRef,
 } from "./functions";
+import { TypingsCollector } from "./test";
 
 const oAuthOverride = true;
 const useCustomFetcher = true;
 
 (async () => {
   var endpoints: Record<string, string[]> = {};
+  var typings: Record<string, string[]> = {};
 
   for (let endpoint in paths) {
+    const typingsCollector = new TypingsCollector();
+
     // @ts-ignore
     const info = paths[endpoint];
     const method = info.get ? "GET" : "POST";
@@ -93,6 +97,8 @@ const useCustomFetcher = true;
           )
         : replaceAll("§{this.url}", "§", "$");
 
+    typingsCollector.collect(responseInterface);
+
     const properties = formatProps(formattedProps, isOauth);
     const includesQueryString = properties.includes("queryString:");
     const stringTemplate = replaceAll(
@@ -109,7 +115,9 @@ const useCustomFetcher = true;
       }
       ${
         method === "POST" && correctMethod.requestBody
-          ? `const bodyParams: ${getFullType(bodyType?.schema)} = ${
+          ? `const bodyParams: ${typingsCollector.getFullType(
+              bodyType?.schema
+            )} = ${
               bodyType?.schema?.type === "array"
                 ? `[${formatBodyProps(bodyArray)}]`
                 : `{${formatBodyProps(bodyArray)}}`
@@ -132,12 +140,19 @@ const useCustomFetcher = true;
 
     if (!endpoints[category]) endpoints[category] = [];
     endpoints[category].push(stringTemplate);
+
+    if (!typings[category]) typings[category] = [];
+    typings[category] = typingsCollector.apply();
   }
 
   // console.log(endpoints);
 
   for (let index in endpoints) {
-    const stringTemplate = `export class ${index} {
+    const stringTemplate = `import { ${typings[index].join(
+      ",\n\n"
+    )} } from "../../types";
+    
+    export class ${index} {
       constructor(
         private url: string,
         private headers: Record<string, string>
