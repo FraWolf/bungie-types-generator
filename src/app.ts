@@ -84,6 +84,9 @@ const allValuesFromInterface: string[] = [];
             value.additionalProperties.type === "object" &&
             value.additionalProperties.additionalProperties;
 
+          const isNestedArray =
+            isAdditional && value.additionalProperties.type === "array";
+
           if (!allValuesFromInterface.includes(fullTestValueWithoutArray)) {
             allValuesFromInterface.push(fullTestValueWithoutArray);
           }
@@ -95,6 +98,10 @@ const allValuesFromInterface: string[] = [];
               ? `${name}: ${objectHead(
                   objectHead(`${fullTestValue}${isNullable}`)
                 )};`
+              : isNestedArray
+              ? `${name}: ${objectHead(
+                  getFullType(value?.additionalProperties)
+                )}`
               : `${name}: ${objectHead(`${fullTestValue}${isNullable}`)};`
             : `${name}: ${`${fullTestValue}${isNullable}`};`;
 
